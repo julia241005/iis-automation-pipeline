@@ -1,0 +1,23 @@
+name: CI/CD Pipeline to IIS VM
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-deploy:
+    runs-on: self-hosted  # <-- Isso diz para o GitHub rodar na SUA VM e não na nuvem deles!
+
+    steps:
+    - name: 1. Checkout do Repositório
+      uses: actions/checkout@v4
+
+    - name: 2. Executar Script de Provisionamento do IIS
+      run: |
+        .\scripts\Provision-IIS.ps1
+      shell: pwsh
+
+    - name: 3. Executar Script de Deploy da Aplicação
+      run: |
+        .\scripts\Deploy-App.ps1
+      shell: pwsh
