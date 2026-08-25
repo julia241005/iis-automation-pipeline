@@ -1,3 +1,5 @@
+Import-Module WebAdministration
+
 # Parametros do ambiente
 param (
     [string]$SiteName = "MeuAppIIS",
