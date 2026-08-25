@@ -1,5 +1,15 @@
 Import-Module WebAdministration
 
+
+param(
+    [string]$SiteName = "PortalArtemys",
+    [int]$Port = 8000,
+    [string]$PhysicalPath = "C:\inetpub\wwwroot\PortalArtemys"
+)
+
+Import-Module WebAdministration
+
+# O restante do seu código vem aqui embaixo...
 # Parametros do ambiente
 param (
     [string]$SiteName = "MeuAppIIS",
