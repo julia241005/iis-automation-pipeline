@@ -6,7 +6,7 @@ on:
 
 jobs:
   build-and-deploy:
-    runs-on: self-hosted # <-- Roda na sua VM local
+    runs-on: self-hosted
 
     steps:
       - name: 1. Checkout do Repositório
@@ -15,9 +15,9 @@ jobs:
       - name: 2. Executar Script de Provisionamento do IIS
         run: |
           .\scripts\Provision-IIS.ps1 -SiteName "PortalArtemys" -Port 8000 -PhysicalPath "C:\inetpub\wwwroot\PortalArtemys"
-        shell: pwsh
+        shell: powershell
 
       - name: 3. Executar Script de Deploy da Aplicação
         run: |
           .\scripts\Deploy-App.ps1 -SiteName "PortalArtemys" -SourcePath "src" -DestinationPath "C:\inetpub\wwwroot\PortalArtemys"
-        shell: pwsh
+        shell: powershell
