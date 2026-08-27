@@ -1,18 +1,18 @@
-name: CI/CD Pipeline to IIS VM
+name: CI/CD Pipeline de Infraestrutura - IIS
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main ]
 
 jobs:
-  build-and-deploy:
+  provision-infrastructure:
     runs-on: self-hosted
 
     steps:
-      - name: 1. Checkout do Repositório
-        uses: actions/checkout@v4
+    - name: Checkout do Repositório
+      uses: actions/checkout@v4
 
-      - name: 2. Executar Script de Provisionamento do IIS
-        run: |
-          .\scripts\Provision-IIS.ps1 -SiteName "PortalArtemys" -Port 8000 -PhysicalPath "C:\inetpub\wwwroot\PortalArtemys"
-        shell: powershell
+    - name: Executar Provisionamento do IIS no Servidor (IaC)
+      shell: powershell
+      run: |
+        & .\scripts\Provision-IIS.ps1 -SiteName "PortalArtemys" -Port 8000 -PhysicalPath "C:\inetpub\wwwroot\PortalArtemys"
