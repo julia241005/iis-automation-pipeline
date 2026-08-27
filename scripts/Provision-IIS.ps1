@@ -1,13 +1,12 @@
-Import-Module WebAdministration
-
 param(
-
     [string]$SiteName = "PortalArtemys",
     [int]$Port = 8000,
     [string]$PhysicalPath = "C:\inetpub\wwwroot\PortalArtemys"
 )
 
 Import-Module WebAdministration
+
+# O restante do seu código continua aqui embaixo...
 
 if (-not (Test-Path $PhysicalPath)) {
     New-Item -ItemType Directory -Path $PhysicalPath -Force
