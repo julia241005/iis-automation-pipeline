@@ -24,7 +24,7 @@ if ($serverManager.ApplicationPools[$SiteName] -eq $null) {
 # 2. Configura o Site no IIS
 if ($serverManager.Sites[$SiteName] -eq $null) {
     Write-Host "Criando Site IIS na porta $Port..."
-    $site = $serverManager.Sites.Add($SiteName, "http", "*:$Port:", $PhysicalPath)
+   $site = $serverManager.Sites.Add($SiteName, "http", "*:${Port}:", $PhysicalPath)
     $site.ApplicationPoolName = $SiteName
 } else {
     Write-Host "Site $SiteName já existe. Atualizando caminho..."

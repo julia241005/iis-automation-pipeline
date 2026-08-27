@@ -12,12 +12,7 @@ jobs:
       - name: 1. Checkout do Repositório
         uses: actions/checkout@v4
 
-      - name: 2. TESTE - Conexao com a VM
+      - name: 2. Executar Script de Provisionamento do IIS
         run: |
-          Write-Host "================================="
-          Write-Host "PIPELINE CHEGOU NA VM!"
-          Write-Host "================================="
-          hostname
-          whoami
-          $PSVersionTable.PSVersion
+          .\scripts\Provision-IIS.ps1 -SiteName "PortalArtemys" -Port 8000 -PhysicalPath "C:\inetpub\wwwroot\PortalArtemys"
         shell: powershell
