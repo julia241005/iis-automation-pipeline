@@ -28,7 +28,7 @@ try {
     if ($serverManager.Sites[$SiteName] -eq $null) {
         Write-Host "Criando Site IIS na porta $Port..."
         $site = $serverManager.Sites.Add($SiteName, "http", "*:$($Port):", $PhysicalPath)
-        $site.ApplicationPoolName = $SiteName
+        $site.Applications["/"].ApplicationPoolName = $SiteName
     } else {
         Write-Host "Site $SiteName já existe. Atualizando caminho..."
         $serverManager.Sites[$SiteName].Applications["/"].VirtualDirectories["/"].PhysicalPath = $PhysicalPath
