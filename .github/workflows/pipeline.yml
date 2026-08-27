@@ -1,8 +1,20 @@
 name: CI/CD Pipeline de Infraestrutura - IIS
 
 on:
-  push:
-    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      site_name:
+        description: 'Nome do Site e AppPool'
+        required: true
+        default: 'SiteTeste02'
+      port:
+        description: 'Porta do IIS'
+        required: true
+        default: '8001'
+      physical_path:
+        description: 'Caminho Físico no Servidor'
+        required: true
+        default: 'C:\inetpub\wwwroot\SiteTeste02'
 
 jobs:
   provision-infrastructure:
@@ -12,7 +24,7 @@ jobs:
     - name: Checkout do Repositório
       uses: actions/checkout@v4
 
-    - name: Executar Provisionamento do IIS no Servidor (IaC)
+    - name: Executar Provisionamento Dinâmico no IIS
       shell: powershell
       run: |
-        & .\scripts\Provision-IIS.ps1 -SiteName "PortalArtemys" -Port 8000 -PhysicalPath "C:\inetpub\wwwroot\PortalArtemys"
+        & .\scripts\Provision-IIS.ps1 -SiteName "${{ github.event.inputs.site_name }}" -Port ${{ github.event.inputs.port }} -PhysicalPath "${{ github.event.inputs.physical_path }}"
