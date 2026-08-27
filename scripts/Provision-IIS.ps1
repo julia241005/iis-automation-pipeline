@@ -1,4 +1,7 @@
+Import-Module WebAdministration
+
 param(
+
     [string]$SiteName = "PortalArtemys",
     [int]$Port = 8000,
     [string]$PhysicalPath = "C:\inetpub\wwwroot\PortalArtemys"
