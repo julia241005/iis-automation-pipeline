@@ -48,3 +48,23 @@ on:
         options:
           - 'HTTP (Porta 80)'
           - 'HTTPS com Certificado (Porta 443)'
+
+jobs:
+  provision-infrastructure:
+    runs-on: self-hosted
+    steps:
+      - name: Baixar codigo do repositorio
+        uses: actions/checkout@v4
+
+      - name: Executar Provisionamento do IIS
+        shell: powershell
+        run: |
+          .\scripts\Provision-IIS.ps1 `
+            -SiteName "${{ inputs.nome_site }}" `
+            -AppPoolName "${{ inputs.nome_apppool }}" `
+            -PhysicalPath "${{ inputs.caminho_fisico }}" `
+            -DotNetVersion "${{ inputs.versao_dotnet }}" `
+            -PipelineMode "${{ inputs.modo_pipeline }}" `
+            -AppPoolIdentity "${{ inputs.identidade_pool }}" `
+            -HostName "${{ inputs.host_name }}" `
+            -Protocol "${{ inputs.protocolo }}"
