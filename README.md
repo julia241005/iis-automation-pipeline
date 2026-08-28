@@ -8,7 +8,7 @@ A automação permite criar e configurar um novo ambiente IIS a partir de um for
 
 ## 1. Objetivo
 
-O objetivo deste projeto é automatizar o processo de criação de ambientes IIS.
+O objetivo deste projeto é automatizar o processo de criação e configuração de ambientes IIS.
 
 O processo manual normalmente envolve várias configurações, como:
 
@@ -25,7 +25,7 @@ O processo manual normalmente envolve várias configurações, como:
 - Associação do certificado
 - Inicialização do Site e Application Pool
 
-Com a automação, essas informações são fornecidas através de um formulário no GitHub Actions e utilizadas pelo script PowerShell.
+Com a automação, essas informações são fornecidas através de um formulário no GitHub Actions e utilizadas pelos scripts PowerShell.
 
 ---
 
