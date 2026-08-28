@@ -7,14 +7,17 @@ on:
         description: 'Nome do Site no IIS (Ex: Remaza (Adesao))'
         required: true
         type: string
+
       nome_apppool:
         description: 'Nome do App Pool (Ex: App_Remaza_Adesao)'
         required: true
         type: string
+
       caminho_fisico:
         description: 'Caminho Físico (Ex: D:\Remaza-Adesao)'
         required: true
         type: string
+
       versao_dotnet:
         description: 'Versão do .NET CLR'
         required: true
@@ -23,6 +26,7 @@ on:
           - 'v4.0'
           - 'v2.0'
           - 'No Managed Code'
+
       modo_pipeline:
         description: 'Modo do Pipeline'
         required: true
@@ -30,34 +34,59 @@ on:
         options:
           - 'Integrated'
           - 'Classic'
+
       identidade_pool:
-        description: 'Conta de Serviço do App Pool'
+        description: 'Identidade do App Pool'
         required: true
         type: choice
         options:
           - 'REMAZAWEB\WebTrusted'
           - 'ApplicationPoolIdentity'
+
       host_name:
-        description: 'Domínio/URL (Ex: devadesao.remaza.com.br)'
+        description: 'Hostname (Ex: devadesao.remaza.com.br)'
         required: true
         type: string
+
       protocolo:
-        description: 'Protocolo e Bindings'
+        description: 'Protocolo'
         required: true
         type: choice
         options:
-          - 'HTTP (Porta 80)'
-          - 'HTTPS com Certificado (Porta 443)'
+          - 'HTTP'
+          - 'HTTPS'
+          - 'HTTP + HTTPS'
+
+      ip_binding:
+        description: 'IP do Binding (Ex: 172.19.10.10)'
+        required: true
+        default: '172.19.10.10'
+        type: string
+
+      certificado_nome:
+        description: 'Nome do certificado HTTPS (Ex: *.remaza.com.br)'
+        required: false
+        default: '*.remaza.com.br'
+        type: string
 
 jobs:
   provision-infrastructure:
     runs-on: self-hosted
+
     steps:
       - name: Baixar codigo do repositorio
         uses: actions/checkout@v4
 
+      - name: Verificar arquivo de provisionamento
+        shell: powershell
+        run: |
+          Write-Host "Arquivo utilizado:"
+          Get-Item ".\scripts\Provision-IIS.ps1" | Select-Object FullName, Length, LastWriteTime
+
       - name: Executar Provisionamento do IIS
         shell: powershell
+        env:
+          WEBTRUSTED_PASSWORD: ${{ secrets.WEBTRUSTED_PASSWORD }}
         run: |
           .\scripts\Provision-IIS.ps1 `
             -SiteName "${{ inputs.nome_site }}" `
@@ -67,4 +96,6 @@ jobs:
             -PipelineMode "${{ inputs.modo_pipeline }}" `
             -AppPoolIdentity "${{ inputs.identidade_pool }}" `
             -HostName "${{ inputs.host_name }}" `
-            -Protocol "${{ inputs.protocolo }}"
+            -Protocol "${{ inputs.protocolo }}" `
+            -BindingIP "${{ inputs.ip_binding }}" `
+            -CertificateName "${{ inputs.certificado_nome }}"
