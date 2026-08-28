@@ -3,28 +3,48 @@ name: CI/CD Pipeline de Infraestrutura - IIS
 on:
   workflow_dispatch:
     inputs:
-      site_name:
-        description: 'Nome do Site e AppPool'
+      nome_site:
+        description: 'Nome do Site no IIS (Ex: Remaza (Adesao))'
         required: true
-        default: 'SiteTeste02'
-      port:
-        description: 'Porta do IIS'
+        type: string
+      nome_apppool:
+        description: 'Nome do App Pool (Ex: App_Remaza_Adesao)'
         required: true
-        default: '8001'
-      physical_path:
-        description: 'Caminho Físico no Servidor'
+        type: string
+      caminho_fisico:
+        description: 'Caminho Físico (Ex: D:\Remaza-Adesao)'
         required: true
-        default: 'C:\inetpub\wwwroot\SiteTeste02'
-
-jobs:
-  provision-infrastructure:
-    runs-on: self-hosted
-
-    steps:
-    - name: Checkout do Repositório
-      uses: actions/checkout@v4
-
-    - name: Executar Provisionamento Dinâmico no IIS
-      shell: powershell
-      run: |
-        & .\scripts\Provision-IIS.ps1 -SiteName "${{ github.event.inputs.site_name }}" -Port ${{ github.event.inputs.port }} -PhysicalPath "${{ github.event.inputs.physical_path }}"
+        type: string
+      versao_dotnet:
+        description: 'Versão do .NET CLR'
+        required: true
+        type: choice
+        options:
+          - 'v4.0'
+          - 'v2.0'
+          - 'No Managed Code'
+      modo_pipeline:
+        description: 'Modo do Pipeline'
+        required: true
+        type: choice
+        options:
+          - 'Integrated'
+          - 'Classic'
+      identidade_pool:
+        description: 'Conta de Serviço do App Pool'
+        required: true
+        type: choice
+        options:
+          - 'REMAZAWEB\WebTrusted'
+          - 'ApplicationPoolIdentity'
+      host_name:
+        description: 'Domínio/URL (Ex: devadesao.remaza.com.br)'
+        required: true
+        type: string
+      protocolo:
+        description: 'Protocolo e Bindings'
+        required: true
+        type: choice
+        options:
+          - 'HTTP (Porta 80)'
+          - 'HTTPS com Certificado (Porta 443)'
