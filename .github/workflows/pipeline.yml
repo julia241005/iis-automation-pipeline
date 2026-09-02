@@ -71,7 +71,7 @@ on:
 
 jobs:
   provision-infrastructure:
-    runs-on: self-hosted
+    runs-on: [self-hosted, deploy-iis-julia]
 
     steps:
       - name: Baixar codigo do repositorio
