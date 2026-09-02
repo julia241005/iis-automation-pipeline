@@ -41,7 +41,7 @@ Import-Module WebAdministration
 
 Write-Host ""
 Write-Host "======================================================================" -ForegroundColor Cyan
-Write-Host "        INICIANDO VALIDACAO E PROVISIONAMENTO IIS SEGURO"
+Write-Host "        INICIANDO VALIDACAO E PROVISIONAMENTO IIS SEGURO" -ForegroundColor Cyan
 Write-Host "======================================================================" -ForegroundColor Cyan
 Write-Host " [Parametros de Entrada]" -ForegroundColor DarkCyan
 Write-Host "  - Nome do Site:      $SiteName"
