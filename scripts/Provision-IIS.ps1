@@ -175,91 +175,24 @@ try {
     Write-Host "[OK] Site registrado no IIS com sucesso." -ForegroundColor Green
     Write-Host ""
 
-    # ------------------------------------------------------------------
-    # PASSO 5: Binding HTTP
+   # ------------------------------------------------------------------
+    # PASSO 5: Binding HTTP (Protegido contra Duplicidade)
     # ------------------------------------------------------------------
 
     Write-Host "[5/7] Configurando portas e tráfego HTTP..." -ForegroundColor Yellow
     if ($Protocol -eq "HTTP" -or $Protocol -eq "HTTP + HTTPS") {
-        Write-Host "   -> Adicionando binding HTTP ($BindingIP`:80`:$HostName)" -ForegroundColor DarkGray
-        New-WebBinding -Name $SiteName -Protocol "http" -IPAddress $BindingIP -Port 80 -HostHeader $HostName -Force | Out-Null
-        Write-Host "[OK] Binding HTTP configurado." -ForegroundColor Green
+        Write-Host "   -> Verificando binding HTTP ($BindingIP`:80`:$HostName)..." -ForegroundColor DarkGray
+        
+        $existingBinding = Get-WebBinding -Name $SiteName -Protocol "http" -IPAddress $BindingIP -Port 80 -HostHeader $HostName -ErrorAction SilentlyContinue
+        
+        if ($null -eq $existingBinding) {
+            New-WebBinding -Name $SiteName -Protocol "http" -IPAddress $BindingIP -Port 80 -HostHeader $HostName -Force | Out-Null
+            Write-Host "[OK] Binding HTTP configurado." -ForegroundColor Green
+        } else {
+            Write-Host "[OK] Binding HTTP já existente, mantendo íntegro." -ForegroundColor Green
+        }
     }
     else {
         Write-Host "   [IGNORADO] Protocolo HTTP não selecionado para este ambiente." -ForegroundColor DarkGray
     }
     Write-Host ""
-
-    # ------------------------------------------------------------------
-    # PASSO 6: Binding HTTPS + Certificado
-    # ------------------------------------------------------------------
-
-    if ($Protocol -eq "HTTPS" -or $Protocol -eq "HTTP + HTTPS") {
-        Write-Host "[6/7] Configurando segurança HTTPS e Certificado SSL..." -ForegroundColor Yellow
-
-        $certificate = Get-ChildItem -Path "Cert:\LocalMachine\My" |
-            Where-Object { $_.Subject -like "*$CertificateName*" -and $_.HasPrivateKey -eq $true } |
-            Sort-Object NotAfter -Descending |
-            Select-Object -First 1
-
-        if ($null -eq $certificate) {
-            throw "[ERRO DE CERTIFICADO] O certificado com o padrão '$CertificateName' não foi encontrado no repositório local do Windows (Cert:\LocalMachine\My) ou carece de chave privada."
-        }
-
-        Write-Host "   -> Certificado SSL localizado:" -ForegroundColor DarkGray
-        Write-Host "      Subject:    $($certificate.Subject)"
-        Write-Host "      Thumbprint: $($certificate.Thumbprint)"
-        Write-Host "      Validade:   $($certificate.NotAfter)"
-
-        New-WebBinding -Name $SiteName -Protocol "https" -IPAddress $BindingIP -Port 443 -HostHeader $HostName -SslFlags 1 -Force | Out-Null
-
-        $httpsBinding = Get-WebBinding -Name $SiteName -Protocol "https" -Port 443 -ErrorAction Stop
-        $httpsBinding.AddSslCertificate($certificate.Thumbprint, "MY")
-
-        Write-Host "[OK] Binding HTTPS ativado com suporte a SNI e certificado vinculado." -ForegroundColor Green
-    }
-    else {
-        Write-Host "[6/7] Tráfego HTTPS não requerido para esta execução." -ForegroundColor DarkGray
-    }
-    Write-Host ""
-
-    # ------------------------------------------------------------------
-    # PASSO 7: Validação Final e Inicialização
-    # ------------------------------------------------------------------
-
-    Write-Host "[7/7] Realizando inspeção final de saúde do ambiente..." -ForegroundColor Yellow
-
-    $finalPool = Get-Item "IIS:\AppPools\$AppPoolName" -ErrorAction Stop
-    $finalSite = Get-Website -Name $SiteName -ErrorAction Stop
-
-    if ((Get-WebAppPoolState -Name $AppPoolName).Value -ne "Started") {
-        Start-WebAppPool -Name $AppPoolName
-    }
-
-    if ((Get-WebsiteState -Name $SiteName).Value -ne "Started") {
-        Start-Website -Name $SiteName
-    }
-
-    Write-Host ""
-    Write-Host "======================================================================" -ForegroundColor Green
-    Write-Host "          SUCESSO ABSOLUTO: AMBIENTE IIS PRONTO E ONLINE"
-    Write-Host "======================================================================" -ForegroundColor Green
-    Write-Host "  - Nome do Site:     $($finalSite.Name)"
-    Write-Host "  - App Pool Ativo:   $($finalSite.applicationPool)"
-    Write-Host "  - Caminho Mapeado:  $($finalSite.physicalPath)"
-    Write-Host "  - Versão do CLR:    $($finalPool.managedRuntimeVersion)"
-    Write-Host "  - Endpoint URL:     $HostName"
-    Write-Host "======================================================================" -ForegroundColor Green
-}
-catch {
-    Write-Host ""
-    Write-Host "======================================================================" -ForegroundColor Red
-    Write-Host "        FALHA CRÍTICA NO PROVISIONAMENTO - EXECUÇÃO ABORTADA"
-    Write-Host "======================================================================" -ForegroundColor Red
-    Write-Host "Detalhe do Erro:" -ForegroundColor Yellow
-    Write-Host $_.Exception.Message -ForegroundColor Red
-    Write-Host "======================================================================" -ForegroundColor Red
-    Write-Host ""
-
-    exit 1
-}
