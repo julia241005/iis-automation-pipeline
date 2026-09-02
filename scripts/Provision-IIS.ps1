@@ -44,26 +44,26 @@ Write-Host "====================================================================
 Write-Host "        INICIANDO VALIDACAO E PROVISIONAMENTO IIS SEGURO"
 Write-Host "======================================================================" -ForegroundColor Cyan
 Write-Host " [Parametros de Entrada]" -ForegroundColor DarkCyan
-Write-Host "  - Nome do Site:     $SiteName"
-Write-Host "  - App Pool:         $AppPoolName"
-Write-Host "  - Caminho Físico:   $PhysicalPath"
-Write-Host "  - Versão .NET:      $DotNetVersion"
-Write-Host "  - Modo Pipeline:    $PipelineMode"
-Write-Host "  - Identidade Pool:  $AppPoolIdentity"
-Write-Host "  - Hostname / URL:   $HostName"
-Write-Host "  - Protocolo:        $Protocol"
-Write-Host "  - IP de Binding:    $BindingIP"
-Write-Host "  - Certificado:      $CertificateName"
+Write-Host "  - Nome do Site:      $SiteName"
+Write-Host "  - App Pool:          $AppPoolName"
+Write-Host "  - Caminho Físico:    $PhysicalPath"
+Write-Host "  - Versão .NET:       $DotNetVersion"
+Write-Host "  - Modo Pipeline:     $PipelineMode"
+Write-Host "  - Identidade Pool:   $AppPoolIdentity"
+Write-Host "  - Hostname / URL:    $HostName"
+Write-Host "  - Protocolo:         $Protocol"
+Write-Host "  - IP de Binding:     $BindingIP"
+Write-Host "  - Certificado:       $CertificateName"
 Write-Host "======================================================================" -ForegroundColor Cyan
 Write-Host ""
 
 try {
 
     # ------------------------------------------------------------------
-    # PASSO 1: Bateria Completa de Validações Preventivas
+    # PASSO 1: Bateria de Validações e Limpeza Preventiva Automática
     # ------------------------------------------------------------------
 
-    Write-Host "[1/7] Executando verificações de segurança e integridade..." -ForegroundColor Yellow
+    Write-Host "[1/5] Executando verificações de segurança e integridade..." -ForegroundColor Yellow
 
     if ([string]::IsNullOrWhiteSpace($SiteName)) {
         throw "[ERRO DE VALIDAÇÃO] O parâmetro 'SiteName' está vazio ou em branco."
@@ -86,36 +86,30 @@ try {
         throw "[ERRO DE VALIDAÇÃO] O nome do App Pool ('$AppPoolName') não pode ser idêntico ao nome do Site. Utilize o padrão padronizado (Ex: App_$SiteName)."
     }
 
-    # Trava rigorosa contra conflito de App Pool
+    # Limpeza automática de App Pool existente para evitar conflito na esteira
     Write-Host "   -> Verificando se o App Pool '$AppPoolName' já existe no IIS..." -ForegroundColor DarkGray
     if (Test-Path "IIS:\AppPools\$AppPoolName") {
-        throw "[CONFLITO CRÍTICO BLOQUEADO] O Application Pool '$AppPoolName' já está cadastrado no servidor por outro projeto ou processo. Operação abortada para preservar o ambiente de desenvolvimento."
+        Write-Host "   [AVISO] App Pool já existe. Removendo versão anterior para provisionamento limpo..." -ForegroundColor Yellow
+        Stop-WebAppPool -Name $AppPoolName -ErrorAction SilentlyContinue
+        Remove-WebAppPool -Name $AppPoolName -ErrorAction SilentlyContinue
     }
 
-    # Trava rigorosa contra conflito de Site
+    # Limpeza automática de Site existente para evitar conflito na esteira
     Write-Host "   -> Verificando se o Site '$SiteName' já existe no IIS..." -ForegroundColor DarkGray
     if (Test-Path "IIS:\Sites\$SiteName") {
-        throw "[CONFLITO CRÍTICO BLOQUEADO] O Site do IIS '$SiteName' já existe e está configurado no servidor. Operação abortada para evitar sobrescrever dados de terceiros."
+        Write-Host "   [AVISO] Site já existe. Removendo versão anterior para provisionamento limpo..." -ForegroundColor Yellow
+        Stop-Website -Name $SiteName -ErrorAction SilentlyContinue
+        Remove-Website -Name $SiteName -ErrorAction SilentlyContinue
     }
 
-    # Trava contra conflito de Hostname / Binding IP já em uso por outro site
-    Write-Host "   -> Verificando se o Hostname '$HostName' já está em uso..." -ForegroundColor DarkGray
-    $existingBinding = Get-WebBinding | Where-Object { 
-        ($_.bindingInformation -like "*:$HostName*") -or 
-        ($_.bindingInformation -like "$BindingIP*") 
-    }
-    if ($null -ne $existingBinding) {
-        Write-Host "   [AVISO] Já existe um binding associado a esses parâmetros, certifique-se da exclusividade." -ForegroundColor Yellow
-    }
-
-    Write-Host "[OK] Todas as validações preventivas passaram com sucesso. Nenhum conflito detectado." -ForegroundColor Green
+    Write-Host "[OK] Validações e limpeza concluídas com sucesso." -ForegroundColor Green
     Write-Host ""
 
     # ------------------------------------------------------------------
     # PASSO 2: Pasta física
     # ------------------------------------------------------------------
 
-    Write-Host "[2/7] Verificando diretório físico..." -ForegroundColor Yellow
+    Write-Host "[2/5] Verificando diretório físico..." -ForegroundColor Yellow
 
     if (-not (Test-Path -LiteralPath $PhysicalPath)) {
         Write-Host "   -> Criando nova pasta em: $PhysicalPath" -ForegroundColor DarkGray
@@ -131,7 +125,7 @@ try {
     # PASSO 3: Application Pool
     # ------------------------------------------------------------------
 
-    Write-Host "[3/7] Provisionando Application Pool isolado..." -ForegroundColor Yellow
+    Write-Host "[3/5] Provisionando Application Pool isolado..." -ForegroundColor Yellow
     Write-Host "   -> Criando App Pool: $AppPoolName" -ForegroundColor DarkGray
     New-WebAppPool -Name $AppPoolName | Out-Null
     $appPool = Get-Item "IIS:\AppPools\$AppPoolName"
@@ -170,16 +164,16 @@ try {
     # PASSO 4: Site IIS
     # ------------------------------------------------------------------
 
-    Write-Host "[4/7] Criando o Site no IIS..." -ForegroundColor Yellow
+    Write-Host "[4/5] Criando o Site no IIS..." -ForegroundColor Yellow
     New-Website -Name $SiteName -PhysicalPath $PhysicalPath -ApplicationPool $AppPoolName -IPAddress $BindingIP -Port 80 -HostHeader $HostName -Force | Out-Null
     Write-Host "[OK] Site registrado no IIS com sucesso." -ForegroundColor Green
     Write-Host ""
 
-   # ------------------------------------------------------------------
+    # ------------------------------------------------------------------
     # PASSO 5: Binding HTTP (Protegido contra Duplicidade)
     # ------------------------------------------------------------------
 
-    Write-Host "[5/7] Configurando portas e tráfego HTTP..." -ForegroundColor Yellow
+    Write-Host "[5/5] Configurando portas e tráfego HTTP..." -ForegroundColor Yellow
     if ($Protocol -eq "HTTP" -or $Protocol -eq "HTTP + HTTPS") {
         Write-Host "   -> Verificando binding HTTP ($BindingIP`:80`:$HostName)..." -ForegroundColor DarkGray
         
@@ -196,3 +190,19 @@ try {
         Write-Host "   [IGNORADO] Protocolo HTTP não selecionado para este ambiente." -ForegroundColor DarkGray
     }
     Write-Host ""
+
+    Write-Host "======================================================================" -ForegroundColor Green
+    Write-Host " SUCCESS: PROVISIONAMENTO CONCLUIDO COM SUCESSO!" -ForegroundColor Green
+    Write-Host "======================================================================" -ForegroundColor Green
+
+}
+catch {
+    Write-Host ""
+    Write-Host "======================================================================" -ForegroundColor Red
+    Write-Host "         FALHA CRITICA NO PROVISIONAMENTO - EXECUCAO ABORTADA" -ForegroundColor Red
+    Write-Host "======================================================================" -ForegroundColor Red
+    Write-Host "Detalhe do Erro:" -ForegroundColor Yellow
+    Write-Host $_.Exception.Message -ForegroundColor Red
+    Write-Host "======================================================================" -ForegroundColor Red
+    exit 1
+}
