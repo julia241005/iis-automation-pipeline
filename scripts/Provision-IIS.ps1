@@ -157,6 +157,42 @@ try {
     }
     Write-Host ""
 
+    # ------------------------------------------------------------------
+    # PASSO 6: Binding HTTPS e Certificado SSL
+    # ------------------------------------------------------------------
+
+    Write-Host "[6/7] Configurando portas e tráfego HTTPS..." -ForegroundColor Yellow
+    if ($Protocol -eq "HTTPS" -or $Protocol -eq "HTTP + HTTPS") {
+        $existingHttps = Get-WebBinding -Name $SiteName -Protocol "https" -IPAddress $BindingIP -Port 443 -HostHeader $HostName -ErrorAction SilentlyContinue
+        if ($null -eq $existingHttps) {
+            New-WebBinding -Name $SiteName -Protocol "https" -IPAddress $BindingIP -Port 443 -HostHeader $HostName -Force | Out-Null
+            
+            # Vinculando Certificado SSL
+            $cert = Get-ChildItem -Path "Cert:\LocalMachine\My" | Where-Object { $_.Subject -like "*$CertificateName*" } | Select-Object -First 1
+            if ($null -ne $cert) {
+                $binding = Get-WebBinding -Name $SiteName -Protocol "https" -IPAddress $BindingIP -Port 443 -HostHeader $HostName
+                $binding.AddSslCertificate($cert.Thumbprint, "my")
+                Write-Host "[OK] Binding HTTPS e Certificado SSL configurados." -ForegroundColor Green
+            } else {
+                Write-Host "[AVISO] Certificado '$CertificateName' não encontrado, mas o binding HTTPS foi criado." -ForegroundColor Yellow
+            }
+        } else {
+            Write-Host "[OK] Binding HTTPS já existente." -ForegroundColor Green
+        }
+    } else {
+        Write-Host "[IGNORADO] HTTPS não selecionado." -ForegroundColor DarkGray
+    }
+    Write-Host ""
+
+    # ------------------------------------------------------------------
+    # PASSO 7: Inicialização do Site
+    # ------------------------------------------------------------------
+
+    Write-Host "[7/7] Iniciando o site no IIS..." -ForegroundColor Yellow
+    Start-Website -Name $SiteName
+    Write-Host "[OK] Site iniciado com sucesso." -ForegroundColor Green
+    Write-Host ""
+
     Write-Host "======================================================================" -ForegroundColor Green
     Write-Host " SUCCESS: PROVISIONAMENTO CONCLUIDO COM SUCESSO!" -ForegroundColor Green
     Write-Host "======================================================================" -ForegroundColor Green
