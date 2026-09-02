@@ -60,64 +60,45 @@ Write-Host ""
 try {
 
     # ------------------------------------------------------------------
-    # PASSO 1: Bateria de Validações e Limpeza Preventiva Automática
+    # PASSO 1: Validações e Limpeza Preventiva Automática
     # ------------------------------------------------------------------
 
-    Write-Host "[1/5] Executando verificações de segurança e integridade..." -ForegroundColor Yellow
+    Write-Host "[1/7] Executando verificações de segurança e integridade..." -ForegroundColor Yellow
 
-    if ([string]::IsNullOrWhiteSpace($SiteName)) {
-        throw "[ERRO DE VALIDAÇÃO] O parâmetro 'SiteName' está vazio ou em branco."
-    }
+    if ([string]::IsNullOrWhiteSpace($SiteName)) { throw "[ERRO] O parâmetro 'SiteName' está vazio." }
+    if ([string]::IsNullOrWhiteSpace($AppPoolName)) { throw "[ERRO] O parâmetro 'AppPoolName' está vazio." }
+    if ([string]::IsNullOrWhiteSpace($PhysicalPath)) { throw "[ERRO] O parâmetro 'PhysicalPath' está vazio." }
+    if ([string]::IsNullOrWhiteSpace($HostName)) { throw "[ERRO] O parâmetro 'HostName' está vazio." }
 
-    if ([string]::IsNullOrWhiteSpace($AppPoolName)) {
-        throw "[ERRO DE VALIDAÇÃO] O parâmetro 'AppPoolName' está vazio ou em branco."
-    }
-
-    if ([string]::IsNullOrWhiteSpace($PhysicalPath)) {
-        throw "[ERRO DE VALIDAÇÃO] O parâmetro 'PhysicalPath' está vazio ou em branco."
-    }
-
-    if ([string]::IsNullOrWhiteSpace($HostName)) {
-        throw "[ERRO DE VALIDAÇÃO] O parâmetro 'HostName' está vazio ou em branco."
-    }
-
-    # Evita ambiguidade nome igual ao site
     if ($AppPoolName -eq $SiteName) {
-        throw "[ERRO DE VALIDAÇÃO] O nome do App Pool ('$AppPoolName') não pode ser idêntico ao nome do Site. Utilize o padrão padronizado (Ex: App_$SiteName)."
+        throw "[ERRO] O nome do App Pool não pode ser idêntico ao nome do Site."
     }
 
-    # Limpeza automática de App Pool existente para evitar conflito na esteira
-    Write-Host "   -> Verificando se o App Pool '$AppPoolName' já existe no IIS..." -ForegroundColor DarkGray
     if (Test-Path "IIS:\AppPools\$AppPoolName") {
-        Write-Host "   [AVISO] App Pool já existe. Removendo versão anterior para provisionamento limpo..." -ForegroundColor Yellow
+        Write-Host "   [AVISO] App Pool já existe. Removendo versão anterior..." -ForegroundColor Yellow
         Stop-WebAppPool -Name $AppPoolName -ErrorAction SilentlyContinue
         Remove-WebAppPool -Name $AppPoolName -ErrorAction SilentlyContinue
     }
 
-    # Limpeza automática de Site existente para evitar conflito na esteira
-    Write-Host "   -> Verificando se o Site '$SiteName' já existe no IIS..." -ForegroundColor DarkGray
     if (Test-Path "IIS:\Sites\$SiteName") {
-        Write-Host "   [AVISO] Site já existe. Removendo versão anterior para provisionamento limpo..." -ForegroundColor Yellow
+        Write-Host "   [AVISO] Site já existe. Removendo versão anterior..." -ForegroundColor Yellow
         Stop-Website -Name $SiteName -ErrorAction SilentlyContinue
         Remove-Website -Name $SiteName -ErrorAction SilentlyContinue
     }
 
-    Write-Host "[OK] Validações e limpeza concluídas com sucesso." -ForegroundColor Green
+    Write-Host "[OK] Validações e limpeza concluídas." -ForegroundColor Green
     Write-Host ""
 
     # ------------------------------------------------------------------
-    # PASSO 2: Pasta física
+    # PASSO 2: Diretório Físico
     # ------------------------------------------------------------------
 
-    Write-Host "[2/5] Verificando diretório físico..." -ForegroundColor Yellow
-
+    Write-Host "[2/7] Verificando diretório físico..." -ForegroundColor Yellow
     if (-not (Test-Path -LiteralPath $PhysicalPath)) {
-        Write-Host "   -> Criando nova pasta em: $PhysicalPath" -ForegroundColor DarkGray
         New-Item -ItemType Directory -Path $PhysicalPath -Force | Out-Null
-        Write-Host "[OK] Diretório físico criado com sucesso." -ForegroundColor Green
-    }
-    else {
-        Write-Host "[OK] Diretório físico já existe, mantendo estrutura intacta." -ForegroundColor Green
+        Write-Host "[OK] Diretório criado." -ForegroundColor Green
+    } else {
+        Write-Host "[OK] Diretório já existe." -ForegroundColor Green
     }
     Write-Host ""
 
@@ -125,69 +106,54 @@ try {
     # PASSO 3: Application Pool
     # ------------------------------------------------------------------
 
-    Write-Host "[3/5] Provisionando Application Pool isolado..." -ForegroundColor Yellow
-    Write-Host "   -> Criando App Pool: $AppPoolName" -ForegroundColor DarkGray
+    Write-Host "[3/7] Provisionando Application Pool isolado..." -ForegroundColor Yellow
     New-WebAppPool -Name $AppPoolName | Out-Null
     $appPool = Get-Item "IIS:\AppPools\$AppPoolName"
-
     $appPool.managedRuntimeVersion = $DotNetVersion
-
-    switch ($PipelineMode) {
-        "Integrated" { $appPool.managedPipelineMode = "Integrated" }
-        "Classic"    { $appPool.managedPipelineMode = "Classic" }
-    }
+    $appPool.managedPipelineMode = $PipelineMode
 
     if ($AppPoolIdentity -eq "ApplicationPoolIdentity") {
-        Write-Host "   -> Definindo identidade padrão: ApplicationPoolIdentity" -ForegroundColor DarkGray
         $appPool.processModel.identityType = 4
         $appPool.processModel.userName = ""
         $appPool.processModel.password = ""
     }
     elseif ($AppPoolIdentity -eq "REMAZAWEB\WebTrusted") {
-        Write-Host "   -> Definindo identidade segura: REMAZAWEB\WebTrusted" -ForegroundColor DarkGray
         $password = $env:WEBTRUSTED_PASSWORD
-
         if ([string]::IsNullOrWhiteSpace($password)) {
-            throw "[ERRO DE SEGURANÇA] A identidade 'REMAZAWEB\WebTrusted' exige a secret 'WEBTRUSTED_PASSWORD' no repositório do GitHub."
+            throw "[ERRO] A secret 'WEBTRUSTED_PASSWORD' não foi encontrada no repositório."
         }
-
         $appPool.processModel.identityType = 3
         $appPool.processModel.userName = "REMAZAWEB\WebTrusted"
         $appPool.processModel.password = $password
     }
-
     $appPool | Set-Item
-    Write-Host "[OK] Application Pool configurado e ajustado com sucesso." -ForegroundColor Green
+    Write-Host "[OK] Application Pool configurado." -ForegroundColor Green
     Write-Host ""
 
     # ------------------------------------------------------------------
-    # PASSO 4: Site IIS
+    # PASSO 4: Criação do Site IIS
     # ------------------------------------------------------------------
 
-    Write-Host "[4/5] Criando o Site no IIS..." -ForegroundColor Yellow
+    Write-Host "[4/7] Criando o Site no IIS..." -ForegroundColor Yellow
     New-Website -Name $SiteName -PhysicalPath $PhysicalPath -ApplicationPool $AppPoolName -IPAddress $BindingIP -Port 80 -HostHeader $HostName -Force | Out-Null
-    Write-Host "[OK] Site registrado no IIS com sucesso." -ForegroundColor Green
+    Write-Host "[OK] Site registrado no IIS." -ForegroundColor Green
     Write-Host ""
 
     # ------------------------------------------------------------------
-    # PASSO 5: Binding HTTP (Protegido contra Duplicidade)
+    # PASSO 5: Binding HTTP (Blindado contra duplicidade)
     # ------------------------------------------------------------------
 
-    Write-Host "[5/5] Configurando portas e tráfego HTTP..." -ForegroundColor Yellow
+    Write-Host "[5/7] Configurando portas e tráfego HTTP..." -ForegroundColor Yellow
     if ($Protocol -eq "HTTP" -or $Protocol -eq "HTTP + HTTPS") {
-        Write-Host "   -> Verificando binding HTTP ($BindingIP`:80`:$HostName)..." -ForegroundColor DarkGray
-        
         $existingBinding = Get-WebBinding -Name $SiteName -Protocol "http" -IPAddress $BindingIP -Port 80 -HostHeader $HostName -ErrorAction SilentlyContinue
-        
         if ($null -eq $existingBinding) {
             New-WebBinding -Name $SiteName -Protocol "http" -IPAddress $BindingIP -Port 80 -HostHeader $HostName -Force | Out-Null
             Write-Host "[OK] Binding HTTP configurado." -ForegroundColor Green
         } else {
             Write-Host "[OK] Binding HTTP já existente, mantendo íntegro." -ForegroundColor Green
         }
-    }
-    else {
-        Write-Host "   [IGNORADO] Protocolo HTTP não selecionado para este ambiente." -ForegroundColor DarkGray
+    } else {
+        Write-Host "[IGNORADO] HTTP não selecionado." -ForegroundColor DarkGray
     }
     Write-Host ""
 
