@@ -135,7 +135,8 @@ try {
     # ------------------------------------------------------------------
 
     Write-Host "[4/7] Criando o Site no IIS..." -ForegroundColor Yellow
-    New-Website -Name $SiteName -PhysicalPath $PhysicalPath -ApplicationPool $AppPoolName -IPAddress $BindingIP -Port 80 -HostHeader $HostName -Force | Out-Null
+    # DEPOIS (correto):
+New-Website -Name $SiteName -PhysicalPath $PhysicalPath -ApplicationPool $AppPoolName -Force | Out-Null
     Write-Host "[OK] Site registrado no IIS." -ForegroundColor Green
     Write-Host ""
 
