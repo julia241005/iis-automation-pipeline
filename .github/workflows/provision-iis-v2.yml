@@ -1,0 +1,114 @@
+name: Provisionamento IIS V2
+
+on:
+  workflow_dispatch:
+    inputs:
+
+      site_name:
+        description: "Nome do Site no IIS"
+        required: true
+        type: string
+
+      app_pool_name:
+        description: "Nome do Application Pool"
+        required: true
+        type: string
+
+      physical_path:
+        description: "Caminho físico do site"
+        required: true
+        type: string
+
+      dotnet_version:
+        description: "Versão do .NET CLR"
+        required: true
+        type: choice
+        options:
+          - "v4.0"
+          - "v2.0"
+          - "No Managed Code"
+
+      pipeline_mode:
+        description: "Modo do Pipeline"
+        required: true
+        type: choice
+        options:
+          - "Integrated"
+          - "Classic"
+
+      app_pool_identity:
+        description: "Identidade do Application Pool"
+        required: true
+        type: choice
+        options:
+          - "ApplicationPoolIdentity"
+          - "REMAZAWEB\\WebTrusted"
+
+      hostname:
+        description: "Hostname do site"
+        required: true
+        type: string
+
+      protocol:
+        description: "Protocolo"
+        required: true
+        type: choice
+        options:
+          - "HTTP"
+          - "HTTPS"
+          - "HTTP + HTTPS"
+
+      ip_address:
+        description: "IP do Binding"
+        required: true
+        type: string
+
+      certificate_name:
+        description: "Nome do certificado HTTPS (se aplicável)"
+        required: false
+        type: string
+
+
+jobs:
+
+  provision-infrastructure:
+
+    name: Provisionar Infraestrutura IIS
+
+    runs-on: self-hosted
+
+    steps:
+
+      - name: Baixar código do repositório
+        uses: actions/checkout@v4
+
+
+      - name: Verificar arquivo de provisionamento V2
+        shell: powershell
+        run: |
+
+          $scriptPath = "scripts\Provision-IIS-V2.ps1"
+
+          if (!(Test-Path $scriptPath)) {
+              Write-Error "Script não encontrado: $scriptPath"
+              exit 1
+          }
+
+          Write-Host "[OK] Script encontrado: $scriptPath"
+
+
+      - name: Executar Provisionamento IIS V2
+        shell: powershell
+        run: |
+
+          .\scripts\Provision-IIS-V2.ps1 `
+            -SiteName "${{ inputs.site_name }}" `
+            -AppPoolName "${{ inputs.app_pool_name }}" `
+            -PhysicalPath "${{ inputs.physical_path }}" `
+            -DotNetVersion "${{ inputs.dotnet_version }}" `
+            -PipelineMode "${{ inputs.pipeline_mode }}" `
+            -AppPoolIdentity "${{ inputs.app_pool_identity }}" `
+            -Hostname "${{ inputs.hostname }}" `
+            -Protocol "${{ inputs.protocol }}" `
+            -IPAddress "${{ inputs.ip_address }}" `
+            -CertificateName "${{ inputs.certificate_name }}"
