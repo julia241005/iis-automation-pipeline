@@ -35,13 +35,17 @@ $ErrorActionPreference = "Stop"
 Import-Module WebAdministration
 
 try {
+    $ServerName = $env:COMPUTERNAME
+
     Write-Host ""
     Write-Host "============================================================"
     Write-Host "        INICIANDO PROVISIONAMENTO IIS V2"
     Write-Host "============================================================"
+    Write-Host "Servidor de Destino:     $ServerName"
 
     Write-Host ""
     Write-Host "[PARAMETROS]"
+    Write-Host "Servidor:         $ServerName"
     Write-Host "Site Name:        $SiteName"
     Write-Host "App Pool Name:    $AppPoolName"
     Write-Host "Physical Path:    $PhysicalPath"
@@ -214,16 +218,17 @@ try {
 
     Write-Host ""
     Write-Host "============================================================"
-    Write-Host "      PROVISIONAMENTO IIS V2 CONCLUIDO COM SUCESSO"
+    Write-Host "        PROVISIONAMENTO IIS V2 CONCLUIDO COM SUCESSO"
     Write-Host "============================================================"
 
     Write-Host ""
+    Write-Host "Servidor: $ServerName"
     Write-Host "Site: $SiteName"
     Write-Host "App Pool: $AppPoolName"
     Write-Host "Hostname: $Hostname"
     Write-Host "Caminho: $PhysicalPath"
 }
 catch {
-    Write-Error "[FATAL ERROR] Falha crítica durante o provisionamento no IIS: $_"
+    Write-Error "[FATAL ERROR] Falha crítica durante o provisionamento no IIS no servidor $ServerName : $_"
     exit 1
 }
