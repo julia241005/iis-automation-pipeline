@@ -207,15 +207,17 @@ try {
     Write-Host "[6/6] Realizando Health Check da Aplicacao..."
     Start-Sleep -Seconds 2
 
-    $healthUrl = "http://$Hostname"
-    $response = Invoke-WebRequest -Uri $healthUrl -UseBasicParsing -TimeoutSec 5 -ErrorAction SilentlyContinue
-
+   
+  try {
+    $response = Invoke-WebRequest -Uri "http://127.0.0.1" -Headers @{ Host = $Hostname } -UseBasicParsing -TimeoutSec 5
     if ($response.StatusCode -eq 200) {
         Write-Host "[HEALTH CHECK] OK: Aplicação respondendo com HTTP 200!"
     } else {
-        Write-Host "[HEALTH CHECK] AVISO: Código de resposta HTTP foi diferente de 200 ou site indisponível no teste local."
+        Write-Host "[HEALTH CHECK] AVISO: Código de resposta HTTP foi $($response.StatusCode)."
     }
-
+} catch {
+    Write-Host "[HEALTH CHECK] AVISO: O site foi criado, mas o teste local retornou: $_"
+}
     Write-Host ""
     Write-Host "============================================================"
     Write-Host "        PROVISIONAMENTO IIS V2 CONCLUIDO COM SUCESSO"
