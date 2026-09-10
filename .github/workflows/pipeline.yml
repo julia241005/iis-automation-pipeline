@@ -17,6 +17,7 @@ on:
         description: 'Caminho Físico (Ex: D:\Remaza-Adesao)'
         required: true
         type: string
+        default: 'D:\auto-iis-test'
 
       versao_dotnet:
         description: 'Versão do .NET CLR'
