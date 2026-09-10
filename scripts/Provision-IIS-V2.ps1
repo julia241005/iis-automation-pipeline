@@ -187,21 +187,42 @@ try {
     }
 
     if (
-        ($Protocol -eq "HTTPS") -or
-        ($Protocol -eq "HTTP + HTTPS")
-    ) {
-        Write-Host ""
-        Write-Host "Configuracao HTTPS selecionada."
+    ($Protocol -eq "HTTPS") -or 
+    ($Protocol -eq "HTTP + HTTPS")
+) {
+    Write-Host ""
+    Write-Host "Configuracao HTTPS selecionada."
 
-        if ([string]::IsNullOrWhiteSpace($CertificateName)) {
-            Write-Host "[AVISO] Nenhum certificado informado."
-            Write-Host "[AVISO] HTTPS nao sera configurado automaticamente."
-        }
-        else {
-            Write-Host "[AVISO] Certificado solicitado: $CertificateName"
-            Write-Host "[AVISO] Configuracao automatica do certificado sera implementada posteriormente."
-        }
+    if ([string]::IsNullOrWhiteSpace($CertificateName)) {
+        Write-Host "[ERRO FATAL] Nenhum certificado foi informado para a conexao HTTPS." -ForegroundColor Red
+        exit 1
     }
+
+    # 1. Busca flexivel do certificado no repositorio do Windows
+    $CertObj = Get-ChildItem -Path Cert:\LocalMachine\My | Where-Object {
+        $_.Subject -match $CertificateName -or $_.FriendlyName -match $CertificateName
+    } | Select-Object -First 1
+
+    if (-not $CertObj) {
+        Write-Host "[ERRO FATAL] Certificado contendo '$CertificateName' nao foi encontrado!" -ForegroundColor Red
+        Write-Host "Certificados disponiveis no servidor:"
+        Get-ChildItem -Path Cert:\LocalMachine\My | Select-Object Subject, Thumbprint | Format-Table -AutoSize
+        exit 1
+    }
+
+    $Thumbprint = $CertObj.Thumbprint
+    Write-Host "[OK] Certificado localizado: $($CertObj.Subject) (Thumbprint: $Thumbprint)"
+
+    # 2. Verifica e cria o binding HTTPS na porta 443 com SNI
+    $ExistingHttps = Get-WebBinding -Name $SiteName -Protocol "https" -Port 443 -HostHeader $Hostname
+    if (-not $ExistingHttps) {
+        New-WebBinding -Name $SiteName -IPAddress $IPAddress -Port 443 -Protocol "https" -HostHeader $Hostname -SslFlags 1
+        Get-Item "Cert:\LocalMachine\My\$Thumbprint" | New-Item "IIS:\SslBindings\*!443!$Hostname" -Force
+        Write-Host "[OK] Binding HTTPS criado e certificado vinculado com sucesso!"
+    } else {
+        Write-Host "[OK] Binding HTTPS ja existente."
+    }
+}
 
     Write-Host ""
     Write-Host "[6/6] Realizando Health Check da Aplicacao..."
@@ -219,7 +240,7 @@ try {
     Write-Host "[HEALTH CHECK] AVISO: O site foi criado, mas o teste local retornou: $_"
 }
     Write-Host ""
-    Write-Host "============================================================"
+    Write-Host "============================================================"                
     Write-Host "        PROVISIONAMENTO IIS V2 CONCLUIDO COM SUCESSO"
     Write-Host "============================================================"
 
