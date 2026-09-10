@@ -186,11 +186,14 @@ try {
         }
     }
 
-    if (
+    # [5/5] Configurando Bindings...
+Write-Host ""
+Write-Host "[5/5] Configurando Bindings..."
+
+if (
     ($Protocol -eq "HTTPS") -or 
     ($Protocol -eq "HTTP + HTTPS")
 ) {
-    Write-Host ""
     Write-Host "Configuracao HTTPS selecionada."
 
     if ([string]::IsNullOrWhiteSpace($CertificateName)) {
@@ -213,15 +216,26 @@ try {
     $Thumbprint = $CertObj.Thumbprint
     Write-Host "[OK] Certificado localizado: $($CertObj.Subject) (Thumbprint: $Thumbprint)"
 
-    # 2. Verifica e cria o binding HTTPS na porta 443 com SNI
+    # 2. Gerenciamento Inteligente do Binding HTTPS (Cria ou Atualiza)
     $ExistingHttps = Get-WebBinding -Name $SiteName -Protocol "https" -Port 443 -HostHeader $Hostname
+    
     if (-not $ExistingHttps) {
+        # Se nao existe, cria o binding com SNI ativado
         New-WebBinding -Name $SiteName -IPAddress $IPAddress -Port 443 -Protocol "https" -HostHeader $Hostname -SslFlags 1
-        Get-Item "Cert:\LocalMachine\My\$Thumbprint" | New-Item "IIS:\SslBindings\*!443!$Hostname" -Force
-        Write-Host "[OK] Binding HTTPS criado e certificado vinculado com sucesso!"
+        Write-Host "[OK] Binding HTTPS criado com sucesso."
     } else {
-        Write-Host "[OK] Binding HTTPS ja existente."
+        Write-Host "[OK] Binding HTTPS ja existe. Atualizando vinculo do certificado..."
     }
+
+    # 3. Garante a associacao do certificado (funciona tanto para criacao quanto para atualizacao)
+    $BindingObj = Get-WebBinding -Name $SiteName -Protocol "https" -Port 443 -HostHeader $Hostname
+    
+    # Remove vinculo anterior se houver para evitar conflito de hash
+    Get-Item "IIS:\SslBindings\*!443!$Hostname" -ErrorAction SilentlyContinue | Remove-Item -ErrorAction SilentlyContinue
+    
+    # Atrela o novo certificado diretamente na api do IIS
+    $BindingObj.AddSslCertificate($Thumbprint, "My")
+    Write-Host "[OK] Certificado vinculado ao binding HTTPS com sucesso!"
 }
 
     Write-Host ""
