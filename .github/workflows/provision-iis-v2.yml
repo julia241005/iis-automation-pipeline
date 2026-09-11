@@ -68,12 +68,6 @@ on:
         required: false
         type: string
 
-      port:
-        description: "Porta HTTP do site (deixe vazio para o padrão 80)"
-        required: false
-        default: "80"
-        type: string
-
 
 jobs:
 
@@ -88,9 +82,11 @@ jobs:
       - name: Baixar código do repositório
         uses: actions/checkout@v4
 
+
       - name: Verificar arquivo de provisionamento V2
         shell: powershell
         run: |
+
           $scriptPath = "scripts\Provision-IIS-V2.ps1"
 
           if (!(Test-Path $scriptPath)) {
@@ -100,18 +96,19 @@ jobs:
 
           Write-Host "[OK] Script encontrado: $scriptPath"
 
+
       - name: Executar Provisionamento IIS V2
         shell: powershell
         run: |
+
           .\scripts\Provision-IIS-V2.ps1 `
-            -SiteName "${{ github.event.inputs.site_name }}" `
-            -AppPoolName "${{ github.event.inputs.app_pool_name }}" `
-            -PhysicalPath "${{ github.event.inputs.physical_path }}" `
-            -DotNetVersion "${{ github.event.inputs.dotnet_version }}" `
-            -PipelineMode "${{ github.event.inputs.pipeline_mode }}" `
-            -AppPoolIdentity "${{ github.event.inputs.app_pool_identity }}" `
-            -Hostname "${{ github.event.inputs.hostname }}" `
-            -Protocol "${{ github.event.inputs.protocol }}" `
-            -IPAddress "${{ github.event.inputs.ip_address }}" `
-            -CertificateName "${{ github.event.inputs.certificate_name }}" `
-            -Port "${{ github.event.inputs.port }}"
+            -SiteName "${{ inputs.site_name }}" `
+            -AppPoolName "${{ inputs.app_pool_name }}" `
+            -PhysicalPath "${{ inputs.physical_path }}" `
+            -DotNetVersion "${{ inputs.dotnet_version }}" `
+            -PipelineMode "${{ inputs.pipeline_mode }}" `
+            -AppPoolIdentity "${{ inputs.app_pool_identity }}" `
+            -Hostname "${{ inputs.hostname }}" `
+            -Protocol "${{ inputs.protocol }}" `
+            -IPAddress "${{ inputs.ip_address }}" `
+            -CertificateName "${{ inputs.certificate_name }}"
