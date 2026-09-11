@@ -27,7 +27,10 @@ param(
     [string]$IPAddress,
 
     [Parameter(Mandatory = $false)]
-    [string]$CertificateName
+    [string]$CertificateName,
+
+    [Parameter(Mandatory = $false)]
+    [int]$Port = 80
 )
 
 $ErrorActionPreference = "Stop"
@@ -56,6 +59,7 @@ try {
     Write-Host "Protocol:         $Protocol"
     Write-Host "IP Address:       $IPAddress"
     Write-Host "Certificate:      $CertificateName"
+    Write-Host "Port:             $Port"
 
     Write-Host ""
     Write-Host "[1/5] Verificando diretorio fisico..."
@@ -135,7 +139,7 @@ try {
             -Name $SiteName `
             -PhysicalPath $PhysicalPath `
             -ApplicationPool $AppPoolName `
-            -Port 80 `
+            -Port $Port `
             -IPAddress $IPAddress `
             -HostHeader $Hostname | Out-Null
         Write-Host "[OK] Site criado."
@@ -156,7 +160,7 @@ try {
     Write-Host ""
     Write-Host "[5/5] Configurando Bindings..."
 
-    $httpBinding = "$IPAddress`:80:$Hostname"
+    $httpBinding = "$IPAddress`:$Port`:$Hostname"
 
     $existingHttpBinding = Get-WebBinding `
         -Name $SiteName `
@@ -180,81 +184,71 @@ try {
                 -Name $SiteName `
                 -Protocol "http" `
                 -IPAddress $IPAddress `
-                -Port 80 `
+                -Port $Port `
                 -HostHeader $Hostname
             Write-Host "[OK] Binding HTTP criado."
         }
     }
 
-    # [5/5] Configurando Bindings...
-Write-Host ""
-Write-Host "[5/5] Configurando Bindings..."
+    if (
+        ($Protocol -eq "HTTPS") -or 
+        ($Protocol -eq "HTTP + HTTPS")
+    ) {
+        Write-Host "Configuracao HTTPS selecionada."
 
-if (
-    ($Protocol -eq "HTTPS") -or 
-    ($Protocol -eq "HTTP + HTTPS")
-) {
-    Write-Host "Configuracao HTTPS selecionada."
+        if ([string]::IsNullOrWhiteSpace($CertificateName)) {
+            Write-Host "[ERRO FATAL] Nenhum certificado foi informado para a conexao HTTPS." -ForegroundColor Red
+            exit 1
+        }
 
-    if ([string]::IsNullOrWhiteSpace($CertificateName)) {
-        Write-Host "[ERRO FATAL] Nenhum certificado foi informado para a conexao HTTPS." -ForegroundColor Red
-        exit 1
+        $CertObj = Get-ChildItem -Path Cert:\LocalMachine\My | Where-Object {
+            $_.Subject -match $CertificateName -or $_.FriendlyName -match $CertificateName
+        } | Select-Object -First 1
+
+        if (-not $CertObj) {
+            Write-Host "[ERRO FATAL] Certificado contendo '$CertificateName' nao foi encontrado!" -ForegroundColor Red
+            Write-Host "Certificados disponiveis no servidor:"
+            Get-ChildItem -Path Cert:\LocalMachine\My | Select-Object Subject, Thumbprint | Format-Table -AutoSize
+            exit 1
+        }
+
+        $Thumbprint = $CertObj.Thumbprint
+        Write-Host "[OK] Certificado localizado: $($CertObj.Subject) (Thumbprint: $Thumbprint)"
+
+        $ExistingHttps = Get-WebBinding -Name $SiteName -Protocol "https" -Port 443 -HostHeader $Hostname
+        
+        if (-not $ExistingHttps) {
+            New-WebBinding -Name $SiteName -IPAddress $IPAddress -Port 443 -Protocol "https" -HostHeader $Hostname -SslFlags 1
+            Write-Host "[OK] Binding HTTPS criado com sucesso."
+        } else {
+            Write-Host "[OK] Binding HTTPS ja existe. Atualizando vinculo do certificado..."
+        }
+
+        $BindingObj = Get-WebBinding -Name $SiteName -Protocol "https" -Port 443 -HostHeader $Hostname
+        
+        Get-Item "IIS:\SslBindings\*!443!$Hostname" -ErrorAction SilentlyContinue | Remove-Item -ErrorAction SilentlyContinue
+        
+        $BindingObj.AddSslCertificate($Thumbprint, "My")
+        Write-Host "[OK] Certificado vinculado ao binding HTTPS com sucesso!"
     }
-
-    # 1. Busca flexivel do certificado no repositorio do Windows
-    $CertObj = Get-ChildItem -Path Cert:\LocalMachine\My | Where-Object {
-        $_.Subject -match $CertificateName -or $_.FriendlyName -match $CertificateName
-    } | Select-Object -First 1
-
-    if (-not $CertObj) {
-        Write-Host "[ERRO FATAL] Certificado contendo '$CertificateName' nao foi encontrado!" -ForegroundColor Red
-        Write-Host "Certificados disponiveis no servidor:"
-        Get-ChildItem -Path Cert:\LocalMachine\My | Select-Object Subject, Thumbprint | Format-Table -AutoSize
-        exit 1
-    }
-
-    $Thumbprint = $CertObj.Thumbprint
-    Write-Host "[OK] Certificado localizado: $($CertObj.Subject) (Thumbprint: $Thumbprint)"
-
-    # 2. Gerenciamento Inteligente do Binding HTTPS (Cria ou Atualiza)
-    $ExistingHttps = Get-WebBinding -Name $SiteName -Protocol "https" -Port 443 -HostHeader $Hostname
-    
-    if (-not $ExistingHttps) {
-        # Se nao existe, cria o binding com SNI ativado
-        New-WebBinding -Name $SiteName -IPAddress $IPAddress -Port 443 -Protocol "https" -HostHeader $Hostname -SslFlags 1
-        Write-Host "[OK] Binding HTTPS criado com sucesso."
-    } else {
-        Write-Host "[OK] Binding HTTPS ja existe. Atualizando vinculo do certificado..."
-    }
-
-    # 3. Garante a associacao do certificado (funciona tanto para criacao quanto para atualizacao)
-    $BindingObj = Get-WebBinding -Name $SiteName -Protocol "https" -Port 443 -HostHeader $Hostname
-    
-    # Remove vinculo anterior se houver para evitar conflito de hash
-    Get-Item "IIS:\SslBindings\*!443!$Hostname" -ErrorAction SilentlyContinue | Remove-Item -ErrorAction SilentlyContinue
-    
-    # Atrela o novo certificado diretamente na api do IIS
-    $BindingObj.AddSslCertificate($Thumbprint, "My")
-    Write-Host "[OK] Certificado vinculado ao binding HTTPS com sucesso!"
-}
 
     Write-Host ""
     Write-Host "[6/6] Realizando Health Check da Aplicacao..."
     Start-Sleep -Seconds 2
 
-   
-  try {
-    $response = Invoke-WebRequest -Uri "http://127.0.0.1" -Headers @{ Host = $Hostname } -UseBasicParsing -TimeoutSec 5
-    if ($response.StatusCode -eq 200) {
-        Write-Host "[HEALTH CHECK] OK: Aplicação respondendo com HTTP 200!"
-    } else {
-        Write-Host "[HEALTH CHECK] AVISO: Código de resposta HTTP foi $($response.StatusCode)."
+    try {
+        $response = Invoke-WebRequest -Uri "http://127.0.0.1:$Port" -Headers @{ Host = $Hostname } -UseBasicParsing -TimeoutSec 5
+        if ($response.StatusCode -eq 200) {
+            Write-Host "[HEALTH CHECK] OK: Aplicação respondendo com HTTP 200!"
+        } else {
+            Write-Host "[HEALTH CHECK] AVISO: Código de resposta HTTP foi $($response.StatusCode)."
+        }
+    } catch {
+        Write-Host "[HEALTH CHECK] AVISO: O site foi criado, mas o teste local retornou: $_"
     }
-} catch {
-    Write-Host "[HEALTH CHECK] AVISO: O site foi criado, mas o teste local retornou: $_"
-}
+
     Write-Host ""
-    Write-Host "============================================================"                
+    Write-Host "============================================================"                        
     Write-Host "        PROVISIONAMENTO IIS V2 CONCLUIDO COM SUCESSO"
     Write-Host "============================================================"
 
@@ -264,6 +258,7 @@ if (
     Write-Host "App Pool: $AppPoolName"
     Write-Host "Hostname: $Hostname"
     Write-Host "Caminho: $PhysicalPath"
+    Write-Host "Porta: $Port"
 }
 catch {
     Write-Error "[FATAL ERROR] Falha crítica durante o provisionamento no IIS no servidor $ServerName : $_"
