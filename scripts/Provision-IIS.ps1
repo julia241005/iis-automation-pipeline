@@ -18,7 +18,7 @@ param(
     [string]$PipelineMode,
 
     [Parameter(Mandatory = $true)]
-    [ValidateSet("REMAZAWEB\WebTrusted", "ApplicationPoolIdentity")]
+    [ValidateSet("DOMINIO\AppPoolUser", "ApplicationPoolIdentity")]
     [string]$AppPoolIdentity,
 
     [Parameter(Mandatory = $true)]
@@ -29,10 +29,10 @@ param(
     [string]$Protocol,
 
     [Parameter(Mandatory = $false)]
-    [string]$BindingIP = "172.19.10.10",
+    [string]$BindingIP = "192.168.1.10",
 
     [Parameter(Mandatory = $false)]
-    [string]$CertificateName = "*.remaza.com.br"
+    [string]$CertificateName = "*.exemplo.com.br"
 )
 
 $ErrorActionPreference = "Stop"
@@ -117,13 +117,13 @@ try {
         $appPool.processModel.userName = ""
         $appPool.processModel.password = ""
     }
-    elseif ($AppPoolIdentity -eq "REMAZAWEB\WebTrusted") {
-        $password = $env:WEBTRUSTED_PASSWORD
+    elseif ($AppPoolIdentity -eq "DOMINIO\AppPoolUser") {
+        $password = $env:CUSTOM_APP_PASSWORD
         if ([string]::IsNullOrWhiteSpace($password)) {
-            throw "[ERRO] A secret 'WEBTRUSTED_PASSWORD' não foi encontrada no repositório."
+            throw "[ERRO] A secret 'CUSTOM_APP_PASSWORD' não foi encontrada no repositório."
         }
         $appPool.processModel.identityType = 3
-        $appPool.processModel.userName = "REMAZAWEB\WebTrusted"
+        $appPool.processModel.userName = "DOMINIO\AppPoolUser"
         $appPool.processModel.password = $password
     }
     $appPool | Set-Item
@@ -135,8 +135,7 @@ try {
     # ------------------------------------------------------------------
 
     Write-Host "[4/7] Criando o Site no IIS..." -ForegroundColor Yellow
-    # DEPOIS (correto):
-New-Website -Name $SiteName -PhysicalPath $PhysicalPath -ApplicationPool $AppPoolName -Force | Out-Null
+    New-Website -Name $SiteName -PhysicalPath $PhysicalPath -ApplicationPool $AppPoolName -Force | Out-Null
     Write-Host "[OK] Site registrado no IIS." -ForegroundColor Green
     Write-Host ""
 
@@ -202,7 +201,7 @@ New-Website -Name $SiteName -PhysicalPath $PhysicalPath -ApplicationPool $AppPoo
 catch {
     Write-Host ""
     Write-Host "======================================================================" -ForegroundColor Red
-    Write-Host "         FALHA CRITICA NO PROVISIONAMENTO - EXECUCAO ABORTADA" -ForegroundColor Red
+    Write-Host "       FALHA CRITICA NO PROVISIONAMENTO - EXECUCAO ABORTADA" -ForegroundColor Red
     Write-Host "======================================================================" -ForegroundColor Red
     Write-Host "Detalhe do Erro:" -ForegroundColor Yellow
     Write-Host $_.Exception.Message -ForegroundColor Red
