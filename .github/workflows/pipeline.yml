@@ -4,17 +4,17 @@ on:
   workflow_dispatch:
     inputs:
       nome_site:
-        description: 'Nome do Site no IIS (Ex: Remaza (Adesao))'
+        description: 'Nome do Site no IIS (Ex: MeuSistema (Homologação))'
         required: true
         type: string
 
       nome_apppool:
-        description: 'Nome do App Pool (Ex: App_Remaza_Adesao)'
+        description: 'Nome do App Pool (Ex: AppPool_MeuSistema)'
         required: true
         type: string
 
       caminho_fisico:
-        description: 'Caminho Físico (Ex: D:\Remaza-Adesao)'
+        description: 'Caminho Físico (Ex: D:\MeuSistema)'
         required: true
         type: string
         default: 'D:\auto-iis-test'
@@ -41,11 +41,11 @@ on:
         required: true
         type: choice
         options:
-          - 'REMAZAWEB\WebTrusted'
+          - 'DOMINIO\AppPoolUser'
           - 'ApplicationPoolIdentity'
 
       host_name:
-        description: 'Hostname (Ex: devadesao.remaza.com.br)'
+        description: 'Hostname (Ex: homolog.exemplo.com.br)'
         required: true
         type: string
 
@@ -59,20 +59,20 @@ on:
           - 'HTTP + HTTPS'
 
       ip_binding:
-        description: 'IP do Binding (Ex: 172.19.10.10)'
+        description: 'IP do Binding (Ex: 192.168.1.10)'
         required: true
-        default: '172.19.10.10'
+        default: '192.168.1.10'
         type: string
 
       certificado_nome:
-        description: 'Nome do certificado HTTPS (Ex: *.remaza.com.br)'
+        description: 'Nome do certificado HTTPS (Ex: *.exemplo.com.br)'
         required: false
-        default: '*.remaza.com.br'
+        default: '*.exemplo.com.br'
         type: string
 
 jobs:
   provision-infrastructure:
-    runs-on: [self-hosted, deploy-iis-julia]
+    runs-on: [self-hosted, default-runner]
 
     steps:
       - name: Baixar codigo do repositorio
@@ -87,7 +87,7 @@ jobs:
       - name: Executar Provisionamento do IIS
         shell: powershell
         env:
-          WEBTRUSTED_PASSWORD: ${{ secrets.WEBTRUSTED_PASSWORD }}
+          POOL_PASSWORD: ${{ secrets.POOL_PASSWORD }}
         run: |
           .\scripts\Provision-IIS.ps1 `
             -SiteName "${{ inputs.nome_site }}" `
