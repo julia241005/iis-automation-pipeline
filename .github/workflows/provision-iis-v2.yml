@@ -42,7 +42,7 @@ on:
         type: choice
         options:
           - "ApplicationPoolIdentity"
-          - "REMAZAWEB\\WebTrusted"
+          - "DOMINIO\\AppPoolUser"
 
       hostname:
         description: "Hostname do site"
