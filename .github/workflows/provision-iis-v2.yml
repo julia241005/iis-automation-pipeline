@@ -68,6 +68,12 @@ on:
         required: false
         type: string
 
+      port:
+        description: "Porta HTTP do site (deixe vazio para o padrão 80)"
+        required: false
+        default: "80"
+        type: string
+
 
 jobs:
 
@@ -111,4 +117,5 @@ jobs:
             -Hostname "${{ inputs.hostname }}" `
             -Protocol "${{ inputs.protocol }}" `
             -IPAddress "${{ inputs.ip_address }}" `
-            -CertificateName "${{ inputs.certificate_name }}"
+            -CertificateName "${{ inputs.certificate_name }}" `
+            -Port "${{ inputs.port }}"
