@@ -17,6 +17,7 @@ on:
         description: 'Caminho Físico (Ex: D:\Remaza-Adesao)'
         required: true
         type: string
+        default: 'D:\auto-iis-test'
 
       versao_dotnet:
         description: 'Versão do .NET CLR'
@@ -71,7 +72,7 @@ on:
 
 jobs:
   provision-infrastructure:
-    runs-on: self-hosted
+    runs-on: [self-hosted, deploy-iis-julia]
 
     steps:
       - name: Baixar codigo do repositorio

@@ -1,0 +1,200 @@
+[1mdiff --git a/.github/workflows/pipeline.yml b/.github/workflows/pipeline.yml[m
+[1mindex acbc3d8..d69692e 100644[m
+[1m--- a/.github/workflows/pipeline.yml[m
+[1m+++ b/.github/workflows/pipeline.yml[m
+[36m@@ -7,14 +7,17 @@[m [mon:[m
+         description: 'Nome do Site no IIS (Ex: Remaza (Adesao))'[m
+         required: true[m
+         type: string[m
+[32m+[m
+       nome_apppool:[m
+         description: 'Nome do App Pool (Ex: App_Remaza_Adesao)'[m
+         required: true[m
+         type: string[m
+[32m+[m
+       caminho_fisico:[m
+         description: 'Caminho Físico (Ex: D:\Remaza-Adesao)'[m
+         required: true[m
+         type: string[m
+[32m+[m
+       versao_dotnet:[m
+         description: 'Versão do .NET CLR'[m
+         required: true[m
+[36m@@ -23,6 +26,7 @@[m [mon:[m
+           - 'v4.0'[m
+           - 'v2.0'[m
+           - 'No Managed Code'[m
+[32m+[m
+       modo_pipeline:[m
+         description: 'Modo do Pipeline'[m
+         required: true[m
+[36m@@ -30,34 +34,59 @@[m [mon:[m
+         options:[m
+           - 'Integrated'[m
+           - 'Classic'[m
+[32m+[m
+       identidade_pool:[m
+[31m-        description: 'Conta de Serviço do App Pool'[m
+[32m+[m[32m        description: 'Identidade do App Pool'[m
+         required: true[m
+         type: choice[m
+         options:[m
+           - 'REMAZAWEB\WebTrusted'[m
+           - 'ApplicationPoolIdentity'[m
+[32m+[m
+       host_name:[m
+[31m-        description: 'Domínio/URL (Ex: devadesao.remaza.com.br)'[m
+[32m+[m[32m        description: 'Hostname (Ex: devadesao.remaza.com.br)'[m
+         required: true[m
+         type: string[m
+[32m+[m
+       protocolo:[m
+[31m-        description: 'Protocolo e Bindings'[m
+[32m+[m[32m        description: 'Protocolo'[m
+         required: true[m
+         type: choice[m
+         options:[m
+[31m-          - 'HTTP (Porta 80)'[m
+[31m-          - 'HTTPS com Certificado (Porta 443)'[m
+[32m+[m[32m          - 'HTTP'[m
+[32m+[m[32m          - 'HTTPS'[m
+[32m+[m[32m          - 'HTTP + HTTPS'[m
+[32m+[m
+[32m+[m[32m      ip_binding:[m
+[32m+[m[32m        description: 'IP do Binding (Ex: 172.19.10.10)'[m
+[32m+[m[32m        required: true[m
+[32m+[m[32m        default: '172.19.10.10'[m
+[32m+[m[32m        type: string[m
+[32m+[m
+[32m+[m[32m      certificado_nome:[m
+[32m+[m[32m        description: 'Nome do certificado HTTPS (Ex: *.remaza.com.br)'[m
+[32m+[m[32m        required: false[m
+[32m+[m[32m        default: '*.remaza.com.br'[m
+[32m+[m[32m        type: string[m
+ [m
+ jobs:[m
+   provision-infrastructure:[m
+     runs-on: self-hosted[m
+[32m+[m
+     steps:[m
+       - name: Baixar codigo do repositorio[m
+         uses: actions/checkout@v4[m
+ [m
+[32m+[m[32m      - name: Verificar arquivo de provisionamento[m
+[32m+[m[32m        shell: powershell[m
+[32m+[m[32m        run: |[m
+[32m+[m[32m          Write-Host "Arquivo utilizado:"[m
+[32m+[m[32m          Get-Item ".\scripts\Provision-IIS.ps1" | Select-Object FullName, Length, LastWriteTime[m
+[32m+[m
+       - name: Executar Provisionamento do IIS[m
+         shell: powershell[m
+[32m+[m[32m        env:[m
+[32m+[m[32m          WEBTRUSTED_PASSWORD: ${{ secrets.WEBTRUSTED_PASSWORD }}[m
+         run: |[m
+           .\scripts\Provision-IIS.ps1 `[m
+             -SiteName "${{ inputs.nome_site }}" `[m
+[36m@@ -67,4 +96,6 @@[m [mjobs:[m
+             -PipelineMode "${{ inputs.modo_pipeline }}" `[m
+             -AppPoolIdentity "${{ inputs.identidade_pool }}" `[m
+             -HostName "${{ inputs.host_name }}" `[m
+[31m-            -Protocol "${{ inputs.protocolo }}"[m
+\ No newline at end of file[m
+[32m+[m[32m            -Protocol "${{ inputs.protocolo }}" `[m
+[32m+[m[32m            -BindingIP "${{ inputs.ip_binding }}" `[m
+[32m+[m[32m            -CertificateName "${{ inputs.certificado_nome }}"[m
+\ No newline at end of file[m
+[1mdiff --git a/scripts/Deploy-App.ps1 b/scripts/Deploy-App.ps1[m
+[1mindex 319b48d..b5f075d 100644[m
+[1m--- a/scripts/Deploy-App.ps1[m
+[1m+++ b/scripts/Deploy-App.ps1[m
+[36m@@ -1,49 +1,152 @@[m
+ [CmdletBinding()][m
+ param([m
+[31m-    [Parameter(Mandatory=$true)][m
+[32m+[m[32m    [Parameter(Mandatory = $true)][m
+     [string]$SiteName,[m
+ [m
+[31m-    [Parameter(Mandatory=$false)][m
+[31m-    [string]$SourcePath = "src",[m
+[32m+[m[32m    [Parameter(Mandatory = $true)][m
+[32m+[m[32m    [string]$AppPoolName,[m
+ [m
+[31m-    [Parameter(Mandatory=$false)][m
+[31m-    [string]$DestinationPath = "C:\inetpub\wwwroot\PortalArtemys"[m
+[32m+[m[32m    [Parameter(Mandatory = $true)][m
+[32m+[m[32m    [string]$SourcePath,[m
+[32m+[m
+[32m+[m[32m    [Parameter(Mandatory = $true)][m
+[32m+[m[32m    [string]$DestinationPath[m
+ )[m
+ [m
+[32m+[m[32m$ErrorActionPreference = "Stop"[m
+[32m+[m
+ Import-Module WebAdministration[m
+ [m
+[31m-$Timestamp     = Get-Date -Format "yyyyMMdd_HHmmss"[m
+[31m-$BackupDir     = "C:\DeployBackups\$SiteName"[m
+[31m-$CurrentBackup = Join-Path $BackupDir "Backup_$Timestamp"[m
+[32m+[m[32m$Timestamp = Get-Date -Format "yyyyMMdd_HHmmss"[m
+[32m+[m
+[32m+[m[32m$SafeSiteName = $SiteName -replace '[\\/:*?"<>|]', '_'[m
+[32m+[m
+[32m+[m[32m$BackupDir = "C:\DeployBackups\$SafeSiteName"[m
+[32m+[m
+[32m+[m[32m$CurrentBackup = Join-Path `[m
+[32m+[m[32m    $BackupDir `[m
+[32m+[m[32m    "Backup_$Timestamp"[m
+ [m
+[31m-Write-Host "--- Iniciando o Deploy automatizado para o $SiteName ---" -ForegroundColor Cyan[m
+[32m+[m[32mWrite-Host "==============================================" -ForegroundColor Cyan[m
+[32m+[m[32mWrite-Host "          DEPLOY AUTOMATIZADO IIS"[m
+[32m+[m[32mWrite-Host "==============================================" -ForegroundColor Cyan[m
+[32m+[m[32mWrite-Host "Site:          $SiteName"[m
+[32m+[m[32mWrite-Host "App Pool:      $AppPoolName"[m
+[32m+[m[32mWrite-Host "Origem:        $SourcePath"[m
+[32m+[m[32mWrite-Host "Destino:       $DestinationPath"[m
+[32m+[m[32mWrite-Host "==============================================" -ForegroundColor Cyan[m
+[32m+[m[32mWrite-Host ""[m
+ [m
+ try {[m
+[31m-    # 1. Backup Preventivo[m
+[31m-    Write-Host "[i] Criando backup preventivo..." -ForegroundColor Yellow[m
+[31m-    if (Test-Path $DestinationPath) {[m
+[31m-        New-Item -ItemType Directory -Path $CurrentBackup -Force | Out-Null[m
+[31m-        Copy-Item -Path "$DestinationPath\*" -Destination $CurrentBackup -Recurse -Force[m
+[31m-        Write-Host "[+] Backup salvo em: $CurrentBackup" -ForegroundColor Green[m
+[32m+[m
+[32m+[m[32m    # ---------------------------------------------------------[m
+[32m+[m[32m    # 1. Validar Site[m
+[32m+[m[32m    # ---------------------------------------------------------[m
+[32m+[m
+[32m+[m[32m    Write-Host "[1/5] Validando Site e App Pool..." -ForegroundColor Yellow[m
+[32m+[m
+[32m+[m[32m    $site = Get-Website `[m
+[32m+[m[32m        -Name $SiteName `[m
+[32m+[m[32m        -ErrorAction Stop[m
+[32m+[m
+[32m+[m[32m    $pool = Get-WebAppPoolState `[m
+[32m+[m[32m        -Name $AppPoolName `[m
+[32m+[m[32m        -ErrorAction Stop[m
+[32m+[m
+[32m+[m[32m    Write-Host "[OK] Site e App Pool encontrados." -ForegroundColor Green[m
+[32m+[m
+[32m+[m[32m    # ---------------------------------------------------------[m
+[32m+[m[32m    # 2. Backup[m
+[32m+[m[32m    # ---------------------------------------------------------[m
+[32m+[m
+[32m+[m[32m    Write-Host "[2/5] Criando backup preventivo..." -ForegroundColor Yellow[m
+[32m+[m
+[32m+[m[32m    if (Test-Path -LiteralPath $DestinationPath) {[m
+[32m+[m
+[32m+[m[32m        New-Item `[m
+[32m+[m[32m            -ItemType Directory `[m
+[32m+[m[32m            -Path $CurrentBackup `[m
+[32m+[m[32m            -Force | Out-Null[m
+[32m+[m
+[32m+[m[32m        Copy-Item `[m
+[32m+[m[32m            -Path "$DestinationPath\*" `[m
+[32m+[m[32m            -Destination $CurrentBackup `[m
+[32m+[m[32m            -Recurse `[m
+[32m+[m[32m   
