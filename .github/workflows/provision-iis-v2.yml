@@ -15,9 +15,9 @@ on:
         type: string
 
       physical_path:
-        description: "Caminho Físico"
+        description: "Caminho físico na raiz do D:\ (Ex: D:\RemazaConsorcio.API ou D:\Websupply-MRV)"
         required: true
-        default: 'D:\'
+        default: 'D:\RemazaConsorcio.API'
         type: string
 
       dotnet_version:
@@ -38,7 +38,7 @@ on:
           - "Classic"
 
       app_pool_identity:
-        description: "Identidade do App Pool"
+        description: "Identidade do Application Pool"
         required: true
         type: choice
         options:
@@ -65,7 +65,7 @@ on:
         type: string
 
       certificate_name:
-        description: "Nome do certificado HTTPS"
+        description: "Nome do certificado HTTPS (se aplicável)"
         required: false
         type: string
 
