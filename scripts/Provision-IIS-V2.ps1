@@ -202,7 +202,7 @@ try {
         }
 
         $CertObj = Get-ChildItem -Path Cert:\LocalMachine\My | Where-Object {
-            $_.Subject -match $CertificateName -or $_.FriendlyName -match $CertificateName
+            $_.Subject -match$CertificateName -or $_.FriendlyName -match$CertificateName
         } | Select-Object -First 1
 
         if (-not $CertObj) {
@@ -212,8 +212,8 @@ try {
             exit 1
         }
 
-        $Thumbprint = $CertObj.Thumbprint
-        Write-Host "[OK] Certificado localizado: $($CertObj.Subject) (Thumbprint: $Thumbprint)"
+        $Thumbprint =$CertObj.Thumbprint
+        Write-Host "[OK] Certificado localizado: $($CertObj.Subject) (Thumbprint:$Thumbprint)"
 
         $ExistingHttps = Get-WebBinding -Name $SiteName -Protocol "https" -Port 443 -HostHeader $Hostname
         
@@ -260,6 +260,6 @@ try {
     Write-Host "Caminho: $PhysicalPath"
 }
 catch {
-    Write-Error "[FATAL ERROR] Falha crítica durante o provisionamento no IIS no servidor $ServerName : $_"
+    Write-Error "[FATAL ERROR] Falha crítica durante o provisionamento no IIS no servidor $ServerName :$_"
     exit 1
 }
