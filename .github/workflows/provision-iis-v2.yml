@@ -15,8 +15,9 @@ on:
         type: string
 
       physical_path:
-        description: "Caminho físico do site"
+        description: "Caminho físico na raiz do D:\ (Ex: D:\RemazaConsorcio.API ou D:\Websupply-MRV)"
         required: true
+        default: "D:\RemazaConsorcio.API"
         type: string
 
       dotnet_version:
@@ -86,7 +87,6 @@ jobs:
       - name: Verificar arquivo de provisionamento V2
         shell: powershell
         run: |
-
           $scriptPath = "scripts\Provision-IIS-V2.ps1"
 
           if (!(Test-Path $scriptPath)) {
@@ -100,7 +100,6 @@ jobs:
       - name: Executar Provisionamento IIS V2
         shell: powershell
         run: |
-
           .\scripts\Provision-IIS-V2.ps1 `
             -SiteName "${{ inputs.site_name }}" `
             -AppPoolName "${{ inputs.app_pool_name }}" `
