@@ -17,7 +17,7 @@ on:
       physical_path:
         description: "Caminho Físico"
         required: true
-        default: "D:\"
+        default: 'D:\'
         type: string
 
       dotnet_version:
