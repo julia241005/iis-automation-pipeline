@@ -25,7 +25,7 @@ on:
           - "Primarca"
 
       nome_projeto:
-        description: "Nome do Projeto/API (Ex: API, CMS, Intranet, MRV)"
+        description: "Nome do Projeto/API"
         required: true
         type: string
 
@@ -74,7 +74,7 @@ on:
         type: string
 
       certificate_name:
-        description: "Nome do certificado HTTPS (se aplicável)"
+        description: "Nome do certificado HTTPS"
         required: false
         type: string
 
