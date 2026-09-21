@@ -15,7 +15,7 @@ on:
         type: string
 
       physical_path:
-        description: "Caminho físico na raiz do D:\ (Ex: D:\RemazaConsorcio.API ou D:\Websupply-MRV)"
+      description: "Caminho físico na raiz do D:/ (Ex: D:/RemazaConsorcio.API ou D:/Websupply-MRV)"
         required: true
         default: 'D:\RemazaConsorcio.API'
         type: string
