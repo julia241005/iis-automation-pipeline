@@ -10,23 +10,14 @@ on:
         type: string
 
       app_pool_name:
-        description: "Nome do Application Pool"
+        description: "Nome do App Pool"
         required: true
         type: string
 
-      segmento_empresa:
-        description: "Prefixo / Empresa da Raiz do D:\"
+      physical_path:
+        description: "Caminho Físico"
         required: true
-        type: choice
-        options:
-          - "RemazaConsorcio"
-          - "RemazaEmpresas"
-          - "Websupply"
-          - "Primarca"
-
-      nome_projeto:
-        description: "Nome do Projeto/API (Ex: API, CMS, Intranet, MRV)"
-        required: true
+        default: "D:\"
         type: string
 
       dotnet_version:
@@ -47,7 +38,7 @@ on:
           - "Classic"
 
       app_pool_identity:
-        description: "Identidade do Application Pool"
+        description: "Identidade do App Pool"
         required: true
         type: choice
         options:
@@ -74,7 +65,7 @@ on:
         type: string
 
       certificate_name:
-        description: "Nome do certificado HTTPS (se aplicável)"
+        description: "Nome do certificado HTTPS"
         required: false
         type: string
 
@@ -109,22 +100,10 @@ jobs:
       - name: Executar Provisionamento IIS V2
         shell: powershell
         run: |
-          # Monta o caminho físico dinamicamente usando a raiz D:\
-          $empresa = "${{ inputs.segmento_empresa }}"
-          $projeto = "${{ inputs.nome_projeto }}"
-          
-          if ($empresa -like "Websupply*") {
-              $caminhoFisico = "D:\$empresa-$projeto"
-          } else {
-              $caminhoFisico = "D:\$empresa.$projeto"
-          }
-
-          Write-Host "[AUTOMACAO] Caminho físico gerado: $caminhoFisico"
-
           .\scripts\Provision-IIS-V2.ps1 `
             -SiteName "${{ inputs.site_name }}" `
             -AppPoolName "${{ inputs.app_pool_name }}" `
-            -PhysicalPath "$caminhoFisico" `
+            -PhysicalPath "${{ inputs.physical_path }}" `
             -DotNetVersion "${{ inputs.dotnet_version }}" `
             -PipelineMode "${{ inputs.pipeline_mode }}" `
             -AppPoolIdentity "${{ inputs.app_pool_identity }}" `
