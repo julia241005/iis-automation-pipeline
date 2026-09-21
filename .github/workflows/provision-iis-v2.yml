@@ -14,10 +14,19 @@ on:
         required: true
         type: string
 
-      physical_path:
-        description: "Caminho físico na raiz do D:\ (Ex: D:\RemazaConsorcio.API ou D:\Websupply-MRV)"
+      segmento_empresa:
+        description: "Prefixo / Empresa da Raiz do D:\"
         required: true
-        default: "D:\RemazaConsorcio.API"
+        type: choice
+        options:
+          - "RemazaConsorcio"
+          - "RemazaEmpresas"
+          - "Websupply"
+          - "Primarca"
+
+      nome_projeto:
+        description: "Nome do Projeto/API (Ex: API, CMS, Intranet, MRV)"
+        required: true
         type: string
 
       dotnet_version:
@@ -43,7 +52,7 @@ on:
         type: choice
         options:
           - "ApplicationPoolIdentity"
-          - "DOMINIO\\AppPoolUser"
+          - "REMAZAWEB\\WebTrusted"
 
       hostname:
         description: "Hostname do site"
@@ -100,10 +109,22 @@ jobs:
       - name: Executar Provisionamento IIS V2
         shell: powershell
         run: |
+          # Monta o caminho físico dinamicamente usando a raiz D:\
+          $empresa = "${{ inputs.segmento_empresa }}"
+          $projeto = "${{ inputs.nome_projeto }}"
+          
+          if ($empresa -like "Websupply*") {
+              $caminhoFisico = "D:\$empresa-$projeto"
+          } else {
+              $caminhoFisico = "D:\$empresa.$projeto"
+          }
+
+          Write-Host "[AUTOMACAO] Caminho físico gerado: $caminhoFisico"
+
           .\scripts\Provision-IIS-V2.ps1 `
             -SiteName "${{ inputs.site_name }}" `
             -AppPoolName "${{ inputs.app_pool_name }}" `
-            -PhysicalPath "${{ inputs.physical_path }}" `
+            -PhysicalPath "$caminhoFisico" `
             -DotNetVersion "${{ inputs.dotnet_version }}" `
             -PipelineMode "${{ inputs.pipeline_mode }}" `
             -AppPoolIdentity "${{ inputs.app_pool_identity }}" `
